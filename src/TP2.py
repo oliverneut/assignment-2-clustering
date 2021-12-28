@@ -9,7 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.feature_selection import f_classif
 from pandas.plotting import scatter_matrix
-from sklearn.cluster import KMeans, DBSCAN
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.metrics import silhouette_score, adjusted_rand_score
 from sklearn.metrics import pairwise_distances
 from sklearn.neighbors import KNeighborsClassifier
@@ -81,12 +81,12 @@ def select_features(features, labels):
     return s_features[:,[1, 2, 3, 4]]
 
 def confusion_matrix(labels, pred):
-    matrix_labels=pairwise_distances(labels.reshape(-1,1),labels.reshape(-1,1),metric="hamming")
-    matrix_pred=pairwise_distances(pred.reshape(-1,1),pred.reshape(-1,1),metric="hamming")
-    TN=sum(matrix_pred[matrix_labels==1])/2
-    FP=(len(matrix_pred[matrix_labels==1])-sum(matrix_pred[matrix_labels==1]))/2
-    TP=(len(matrix_pred[matrix_labels==0])-matrix_pred.shape[0]-sum(matrix_pred[matrix_labels==0]))/2
-    FN=sum(matrix_pred[matrix_labels==0])/2
+    distances_labels=pairwise_distances(labels.reshape(-1,1),labels.reshape(-1,1),metric="hamming")
+    distances_predictions=pairwise_distances(pred.reshape(-1,1),pred.reshape(-1,1),metric="hamming")
+    TN=sum(distances_predictions[distances_labels==1])/2
+    FP=(len(distances_predictions[distances_labels==1])-sum(distances_predictions[distances_labels==1]))/2
+    TP=(len(distances_predictions[distances_labels==0])-distances_predictions.shape[0]-sum(distances_predictions[distances_labels==0]))/2
+    FN=sum(distances_predictions[distances_labels==0])/2
     return(TP, TN, FP, FN)
 
 def metric_estimation(s_features, pred, labeled_pred, nonzerolabels):
@@ -110,8 +110,8 @@ def metric_estimation(s_features, pred, labeled_pred, nonzerolabels):
 
 
 def k_means_clustering(s_features, labels, k):
-    model = KMeans(n_clusters=k)
-    pred = model.fit_predict(s_features)
+    model_kmeans = KMeans(n_clusters=k)
+    pred = model_kmeans.fit_predict(s_features)
 
     labeled_pred = pred[labels!=0]
     nonzerolabels = labels[labels!=0]
@@ -137,8 +137,8 @@ def plot_distances(data, num_neighbors):
     plt.close()
 
 def dbscan_clustering(s_features, labels, eps):
-    model = DBSCAN(eps=eps)
-    pred = model.fit_predict(s_features)
+    model_kmeans = DBSCAN(eps=eps)
+    pred = model_kmeans.fit_predict(s_features)
 
     labeled_pred = pred[labels!=0]
     nonzerolabels = labels[labels!=0]
@@ -179,11 +179,12 @@ def plot_metrics(range, isKMeans:bool, labels, s_features):
         plt.savefig("K_Means_clustering.png")
     else: 
         plt.xlabel("Eps")
-        plt.title("DBScan_clustering")
-        plt.savefig("DBScan_clustering.png")
+        plt.title("DBSCAN_clustering")
+        plt.savefig("DBSCAN_clustering.png")
     plt.show()
     plt.close()
     plt.show()
+
 def main():
     data = images_as_matrix()
 
@@ -210,12 +211,31 @@ def main():
     # We find a optimal epsilon value at 0.85 using the following function
     #plot_distances(s_features, 5)
 
-    Eps_range = np.arange(0.7, 1, 0.05)
+    Eps_range = np.arange(0.3, 1, 0.05)
     plot_metrics(Eps_range, False, labels=labels, s_features=s_features)
     dbscan_clustering(s_features, labels, eps=0.85)
 
     ids = np.loadtxt('labels.txt', delimiter=',', usecols = 0)
-    #report_clusters(ids, pred, f'k={k}.html')
+
+    # KMeans clustering using k = 4
+    k = 4
+    model_kmeans = KMeans(n_clusters=k)
+    pred = model_kmeans.fit_predict(s_features)
+    report_clusters(ids, pred, f'KMeans_k={k}.html')
+
+    # DBSCAN clustering using eps = 0.5
+    eps = 0.55
+    model_dbscan = DBSCAN(eps=eps)
+    pred = model_dbscan.fit_predict(s_features)
+    report_clusters(ids, pred, f'DBSCAN_eps={eps}.html')
+
+    # Aglomerative clustering using n = 4
+    n = 4
+    model_agglomerative = AgglomerativeClustering(n_clusters=n)
+    pred = model_agglomerative.fit_predict(s_features)
+    report_clusters(ids, pred, f'AgglomerativeClustering_n={n}.html')
+
+
 
 if __name__ == '__main__':
     main()
